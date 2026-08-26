@@ -18,8 +18,8 @@ variable "instance_name" {
 
 variable "instance_size" {
   type        = string
-  description = "The Azure VM size (ARM64 architecture, e.g. Standard_D2ps_v5)"
-  default     = "Standard_D2ps_v5"
+  description = "The Azure VM size (ARM64 architecture, e.g. Standard_D4ps_v5)"
+  default     = "Standard_D4ps_v5"
 }
 
 variable "admin_username" {
