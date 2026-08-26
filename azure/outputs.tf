@@ -1,11 +1,11 @@
 output "instance_ids" {
   description = "The IDs of the Azure runner virtual machines"
-  value       = azurerm_linux_virtual_machine.runner[*].id
+  value       = { for k, v in azurerm_linux_virtual_machine.runner : k => v.id }
 }
 
 output "public_ips" {
   description = "The public IP addresses of the Azure runner virtual machines"
-  value       = azurerm_public_ip.pip[*].ip_address
+  value       = { for k, v in azurerm_public_ip.pip : k => v.ip_address }
 }
 
 output "tls_private_key" {
