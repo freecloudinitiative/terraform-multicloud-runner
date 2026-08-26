@@ -1,7 +1,7 @@
 variable "location" {
   type        = string
   description = "The Azure region to deploy resources into"
-  default     = "germanywestcentral"
+  default     = "northeurope"
 }
 
 variable "resource_group_name" {
@@ -18,8 +18,8 @@ variable "instance_name" {
 
 variable "instance_size" {
   type        = string
-  description = "The Azure VM size (ARM64 architecture, e.g. Standard_D4ps_v5)"
-  default     = "Standard_D4ps_v5"
+  description = "The Azure VM size (e.g. Standard_D2s_v3)"
+  default     = "Standard_D2s_v3"
 }
 
 variable "admin_username" {
@@ -55,7 +55,7 @@ variable "github_org" {
 
 variable "cluster_mode" {
   type        = string
-  description = "Cluster mode: 'simple' (2 VMs) or 'HA' (3 VMs)"
+  description = "Cluster mode: 'simple' (1 VM) or 'HA' (3 VMs)"
   default     = "simple"
 
   validation {
@@ -78,7 +78,7 @@ variable "runners_per_vm" {
 variable "simple_node_count" {
   type        = number
   description = "Number of runner VMs when cluster_mode is 'simple'"
-  default     = 2
+  default     = 1
 }
 
 variable "ha_node_count" {
