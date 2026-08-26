@@ -1,8 +1,3 @@
-locals {
-  node_count     = var.cluster_mode == "HA" ? var.ha_node_count : var.simple_node_count
-  ssh_public_key = var.ssh_public_key != "" ? var.ssh_public_key : (length(tls_private_key.ssh) > 0 ? tls_private_key.ssh[0].public_key_openssh : "")
-}
-
 resource "tls_private_key" "ssh" {
   count     = var.ssh_public_key == "" ? 1 : 0
   algorithm = "RSA"
@@ -10,28 +5,32 @@ resource "tls_private_key" "ssh" {
 }
 
 resource "azurerm_resource_group" "rg" {
-  name     = var.resource_group_name
-  location = var.location
+  for_each = local.runners
+  name     = "${var.resource_group_name}-${each.key}"
+  location = each.value.location
 }
 
 resource "azurerm_virtual_network" "vnet" {
-  name                = "${var.instance_name}-vnet"
+  for_each            = local.runners
+  name                = "${var.instance_name}-${each.key}-vnet"
   address_space       = ["10.0.0.0/16"]
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg[each.key].location
+  resource_group_name = azurerm_resource_group.rg[each.key].name
 }
 
 resource "azurerm_subnet" "subnet" {
-  name                 = "${var.instance_name}-subnet"
-  resource_group_name  = azurerm_resource_group.rg.name
-  virtual_network_name = azurerm_virtual_network.vnet.name
+  for_each             = local.runners
+  name                 = "${var.instance_name}-${each.key}-subnet"
+  resource_group_name  = azurerm_resource_group.rg[each.key].name
+  virtual_network_name = azurerm_virtual_network.vnet[each.key].name
   address_prefixes     = ["10.0.1.0/24"]
 }
 
 resource "azurerm_network_security_group" "nsg" {
-  name                = "${var.instance_name}-nsg"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
+  for_each            = local.runners
+  name                = "${var.instance_name}-${each.key}-nsg"
+  location            = azurerm_resource_group.rg[each.key].location
+  resource_group_name = azurerm_resource_group.rg[each.key].name
 
   security_rule {
     name                       = "SSH"
@@ -47,41 +46,41 @@ resource "azurerm_network_security_group" "nsg" {
 }
 
 resource "azurerm_public_ip" "pip" {
-  count               = local.node_count
-  name                = "${var.instance_name}-pip-${count.index + 1}"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
+  for_each            = local.runners
+  name                = "${var.instance_name}-${each.key}-pip"
+  location            = azurerm_resource_group.rg[each.key].location
+  resource_group_name = azurerm_resource_group.rg[each.key].name
   allocation_method   = "Static"
   sku                 = "Standard"
 }
 
 resource "azurerm_network_interface" "nic" {
-  count               = local.node_count
-  name                = "${var.instance_name}-nic-${count.index + 1}"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
+  for_each            = local.runners
+  name                = "${var.instance_name}-${each.key}-nic"
+  location            = azurerm_resource_group.rg[each.key].location
+  resource_group_name = azurerm_resource_group.rg[each.key].name
 
   ip_configuration {
     name                          = "internal"
-    subnet_id                     = azurerm_subnet.subnet.id
+    subnet_id                     = azurerm_subnet.subnet[each.key].id
     private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = azurerm_public_ip.pip[count.index].id
+    public_ip_address_id          = azurerm_public_ip.pip[each.key].id
   }
 }
 
 resource "azurerm_network_interface_security_group_association" "nic_nsg" {
-  count                     = local.node_count
-  network_interface_id      = azurerm_network_interface.nic[count.index].id
-  network_security_group_id = azurerm_network_security_group.nsg.id
+  for_each                  = local.runners
+  network_interface_id      = azurerm_network_interface.nic[each.key].id
+  network_security_group_id = azurerm_network_security_group.nsg[each.key].id
 }
 
 resource "azurerm_linux_virtual_machine" "runner" {
-  count                 = local.node_count
-  name                  = "${var.instance_name}-${count.index + 1}"
-  location              = azurerm_resource_group.rg.location
-  resource_group_name   = azurerm_resource_group.rg.name
-  network_interface_ids = [azurerm_network_interface.nic[count.index].id]
-  size                  = var.instance_size
+  for_each              = local.runners
+  name                  = "${var.instance_name}-${each.key}"
+  location              = azurerm_resource_group.rg[each.key].location
+  resource_group_name   = azurerm_resource_group.rg[each.key].name
+  network_interface_ids = [azurerm_network_interface.nic[each.key].id]
+  size                  = each.value.size
   admin_username        = var.admin_username
 
   admin_ssh_key {
