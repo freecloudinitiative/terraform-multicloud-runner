@@ -1,0 +1,73 @@
+#!/bin/bash
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -y
+apt-get install -y \
+  curl \
+  wget \
+  jq \
+  tar \
+  unzip \
+  libicu-dev \
+  build-essential \
+  make \
+  git \
+  rsync \
+  ca-certificates \
+  gnupg \
+  sudo \
+  python3 \
+  python3-pip \
+  python3-venv \
+  docker.io
+
+# Enable and start Docker daemon
+systemctl enable --now docker || service docker start
+
+# Create runner user (GitHub runner cannot run as root)
+useradd -m -s /bin/bash github || true
+usermod -aG docker github
+cd /home/github
+
+# Detect system architecture dynamically
+ARCH=$(uname -m)
+case $ARCH in
+  x86_64) RUNNER_ARCH="x64" ;;
+  aarch64|arm64) RUNNER_ARCH="arm64" ;;
+  *) RUNNER_ARCH="arm64" ;;
+esac
+
+# Download runner package
+RUNNER_VERSION="2.336.0"
+TARBALL="/home/github/actions-runner-linux-$${RUNNER_ARCH}-$${RUNNER_VERSION}.tar.gz"
+curl -o "$TARBALL" -L "https://github.com/actions/runner/releases/download/v$${RUNNER_VERSION}/actions-runner-linux-$${RUNNER_ARCH}-$${RUNNER_VERSION}.tar.gz"
+chown github:github "$TARBALL"
+
+# If no PAT is provided, exit early (user can configure manually)
+if [ -z "${github_pat}" ]; then
+  echo "No GitHub PAT provided. Exiting runner setup."
+  exit 0
+fi
+
+# Fetch dynamic runner registration token from GitHub API using the PAT
+REG_TOKEN=$(curl -sX POST -H "Authorization: token ${github_pat}" \
+  -H "Accept: application/vnd.github.v3+json" \
+  https://api.github.com/orgs/${github_org}/actions/runners/registration-token | jq -r .token)
+
+RUNNER_COUNT=${runners_per_vm}
+
+for i in $(seq 1 $RUNNER_COUNT); do
+  RUNNER_DIR="/home/github/runner-$i"
+  mkdir -p "$RUNNER_DIR"
+  tar xzf "$TARBALL" -C "$RUNNER_DIR"
+  chown -R github:github "$RUNNER_DIR"
+
+  cd "$RUNNER_DIR"
+  sudo -u github ./config.sh --url "https://github.com/${github_org}" \
+    --token "$REG_TOKEN" \
+    --unattended \
+    --replace \
+    --name "$(hostname)-runner-$i"
+
+  ./svc.sh install github
+  ./svc.sh start
+done

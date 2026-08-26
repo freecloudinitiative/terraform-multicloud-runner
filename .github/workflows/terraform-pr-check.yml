@@ -1,0 +1,14 @@
+name: "Terraform PR Check"
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check:
+    uses: freecloudinitiative/.github/.github/workflows/terraform-pr-checker.yml@main
+    with:
+      directories: '["gcp", "azure", "aws", "linode", "civo"]'
+      plan: false
+    secrets: inherit
