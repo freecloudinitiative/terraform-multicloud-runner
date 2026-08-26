@@ -1,0 +1,24 @@
+name: "Terraform Destroy"
+
+on:
+  workflow_dispatch:
+    inputs:
+      provider:
+        description: 'Cloud Provider'
+        required: true
+        default: 'gcp'
+        type: choice
+        options:
+          - gcp
+          - aws
+          - azure
+          - linode
+          - civo
+
+jobs:
+  destroy:
+    uses: freecloudinitiative/.github/.github/workflows/terraform-destroy.yml@main
+    with:
+      directory: ${{ inputs.provider || 'gcp' }}
+      gcp-backend-prefix: ${{ inputs.provider || 'gcp' }}
+    secrets: inherit

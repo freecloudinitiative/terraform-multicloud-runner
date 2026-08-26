@@ -1,0 +1,33 @@
+name: "Terraform Apply"
+
+on:
+  workflow_dispatch:
+    inputs:
+      provider:
+        description: 'Cloud Provider'
+        required: true
+        default: 'gcp'
+        type: choice
+        options:
+          - gcp
+          - aws
+          - azure
+          - linode
+          - civo
+      cluster_mode:
+        description: 'Cluster Mode'
+        required: true
+        default: 'simple'
+        type: choice
+        options:
+          - simple
+          - HA
+
+jobs:
+  apply:
+    uses: freecloudinitiative/.github/.github/workflows/terraform-apply.yml@main
+    with:
+      directory: ${{ inputs.provider || 'gcp' }}
+      cluster_mode: ${{ inputs.cluster_mode || 'simple' }}
+      gcp-backend-prefix: ${{ inputs.provider || 'gcp' }}
+    secrets: inherit
