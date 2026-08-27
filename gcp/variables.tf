@@ -29,7 +29,7 @@ variable "machine_type" {
 
 variable "cluster_mode" {
   type        = string
-  description = "Cluster mode: 'simple' (1 VM) or 'HA' (3 VMs)"
+  description = "Cluster mode: 'simple' (1 VM) or 'HA' (4 VMs)"
   default     = "simple"
 
   validation {
