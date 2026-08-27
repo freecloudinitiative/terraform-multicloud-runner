@@ -14,7 +14,7 @@ locals {
     }
     "runner-4" = {
       machine_type = var.machine_type
-      zone         = "us-central1-c"
+      zone         = "us-central1-a"
     }
   }
 
