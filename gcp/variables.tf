@@ -60,7 +60,7 @@ variable "github_org" {
 variable "runners_per_vm" {
   type        = number
   description = "Number of GitHub Actions runner instances to run concurrently per VM"
-  default     = 4
+  default     = 2
 
   validation {
     condition     = var.runners_per_vm > 0 && floor(var.runners_per_vm) == var.runners_per_vm
