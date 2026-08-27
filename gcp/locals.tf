@@ -1,16 +1,20 @@
 locals {
   all_runners = {
-    "1" = {
+    "runner-1" = {
       machine_type = var.machine_type
       zone         = "us-central1-a"
     }
-    "2" = {
+    "runner-2" = {
       machine_type = var.machine_type
       zone         = "us-central1-b"
     }
-    "3" = {
+    "runner-3" = {
       machine_type = var.machine_type
       zone         = "us-central1-f"
+    }
+    "runner-4" = {
+      machine_type = var.machine_type
+      zone         = "us-central1-c"
     }
   }
 

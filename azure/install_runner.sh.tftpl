@@ -49,6 +49,32 @@ if [ -z "${github_pat}" ]; then
   exit 0
 fi
 
+# Configure system limits for high concurrency CI workloads
+cat << 'EOF' > /etc/sysctl.d/99-runner-limits.conf
+fs.inotify.max_user_watches = 1048576
+fs.inotify.max_user_instances = 8192
+fs.file-max = 2097152
+EOF
+sysctl --system || true
+
+cat << 'EOF' >> /etc/security/limits.conf
+* soft nofile 1048576
+* hard nofile 1048576
+root soft nofile 1048576
+root hard nofile 1048576
+github soft nofile 1048576
+github hard nofile 1048576
+EOF
+
+# Set up 8GB swap space to prevent OOM kills on memory-heavy CI jobs
+if [ ! -f /swapfile ]; then
+  fallocate -l 8G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=8192
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+  echo '/swapfile none swap sw 0 0' >> /etc/fstab
+fi
+
 # Fetch dynamic runner registration token from GitHub API using the PAT
 REG_TOKEN=$(curl -sX POST -H "Authorization: token ${github_pat}" \
   -H "Accept: application/vnd.github.v3+json" \
@@ -70,5 +96,15 @@ for i in $(seq 1 $RUNNER_COUNT); do
     --name "$(hostname -s)-runner-$i"
 
   ./svc.sh install github
+
+  # Ensure systemd auto-restarts the runner service on failure
+  SVC_NAME="actions.runner.${github_org}.$(hostname -s)-runner-$i.service"
+  mkdir -p "/etc/systemd/system/$${SVC_NAME}.d"
+  cat << 'EOF' > "/etc/systemd/system/$${SVC_NAME}.d/override.conf"
+[Service]
+Restart=always
+RestartSec=5s
+EOF
+  systemctl daemon-reload
   ./svc.sh start
 done
