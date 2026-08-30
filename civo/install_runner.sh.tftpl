@@ -21,6 +21,13 @@ apt-get install -y \
   docker.io \
   docker-buildx
 
+# Node.js LTS — hashicorp/setup-terraform wrapper and Actions that expect `node` on PATH
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" > /etc/apt/sources.list.d/nodesource.list
+apt-get update -y
+apt-get install -y nodejs
+
 # Enable and start Docker daemon
 systemctl enable --now docker || service docker start
 
